@@ -88,9 +88,7 @@ public class VaultTemplateTransitIntegrationTests extends IntegrationTestSupport
 
 		if (prepare().getVersion().isGreaterThanOrEqualTo(Version.parse("0.6.4"))) {
 			List<String> keys = vaultOperations.opsForTransit().getKeys();
-			for (String keyName : keys) {
-				deleteKey(keyName);
-			}
+			keys.forEach(this::deleteKey);
 		}
 		else {
 			deleteKey("mykey");

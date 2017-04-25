@@ -17,6 +17,7 @@ package org.springframework.vault.authentication;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -73,7 +74,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
 
 	private final Object lock = new Object();
 
-	private volatile VaultToken token;
+	private volatile Optional<VaultToken> token = Optional.empty();
 
 	/**
 	 * Create a {@link LifecycleAwareSessionManager} given {@link ClientAuthentication},
@@ -98,20 +99,20 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
 	@Override
 	public void destroy() {
 
-		VaultToken token = this.token;
-		this.token = null;
+		Optional<VaultToken> token = this.token;
+		this.token = Optional.empty();
 
-		if (token instanceof LoginToken) {
+		token.filter(LoginToken.class::isInstance).ifPresent(vaultToken -> {
 
 			try {
 				restOperations.postForObject("/auth/token/revoke-self",
-						new HttpEntity<Object>(VaultHttpHeaders.from(token)), Map.class);
+						new HttpEntity<>(VaultHttpHeaders.from(vaultToken)), Map.class);
 			}
 			catch (HttpStatusCodeException e) {
 				logger.warn(String.format("Cannot revoke VaultToken: %s",
 						VaultResponses.getError(e.getResponseBodyAsString())));
 			}
-		}
+		});
 	}
 
 	/**
@@ -127,27 +128,28 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
 
 		logger.info("Renewing token");
 
-		if (token == null) {
+		if (!token.isPresent()) {
 			getSessionToken();
 			return false;
 		}
 
 		try {
 			restOperations.postForObject("/auth/token/renew-self",
-					new HttpEntity<Object>(VaultHttpHeaders.from(token)), Map.class);
+					new HttpEntity<>(VaultHttpHeaders.from(token.get())), Map.class);
 			return true;
 		}
 		catch (HttpStatusCodeException e) {
 
 			if (e.getStatusCode().is4xxClientError()) {
-				logger.debug(String
-						.format("Cannot refresh token, resetting token and performing re-login: %s",
-								VaultResponses.getError(e.getResponseBodyAsString())));
+				logger.debug(String.format(
+						"Cannot refresh token, resetting token and performing re-login: %s",
+						VaultResponses.getError(e.getResponseBodyAsString())));
 				token = null;
 				return false;
 			}
 
-			throw new VaultException(VaultResponses.getError(e.getResponseBodyAsString()));
+			throw new VaultException(
+					VaultResponses.getError(e.getResponseBodyAsString()));
 		}
 		catch (RestClientException e) {
 			throw new VaultException("Cannot refresh token", e);
@@ -157,12 +159,12 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
 	@Override
 	public VaultToken getSessionToken() {
 
-		if (token == null) {
+		if (!token.isPresent()) {
 
 			synchronized (lock) {
 
-				if (token == null) {
-					token = clientAuthentication.login();
+				if (!token.isPresent()) {
+					token = Optional.ofNullable(clientAuthentication.login());
 
 					if (isTokenRenewable()) {
 						scheduleRenewal();
@@ -171,44 +173,40 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
 			}
 		}
 
-		return token;
+		return token
+				.orElseThrow(() -> new IllegalStateException("Cannot obtain VaultToken"));
 	}
 
 	private boolean isTokenRenewable() {
 
-		if (token instanceof LoginToken) {
+		return token.filter(LoginToken.class::isInstance) //
+				.filter(it -> {
 
-			LoginToken loginToken = (LoginToken) token;
-			return loginToken.getLeaseDuration() > 0 && loginToken.isRenewable();
-		}
-
-		return false;
+					LoginToken loginToken = (LoginToken) it;
+					return loginToken.getLeaseDuration() > 0 && loginToken.isRenewable();
+				}).isPresent();
 	}
 
 	private void scheduleRenewal() {
 
 		logger.info("Scheduling Token renewal");
 
-		LoginToken loginToken = (LoginToken) token;
-		final int seconds = NumberUtils
-				.convertNumberToTargetClass(
-						Math.max(1, loginToken.getLeaseDuration()
-								- REFRESH_PERIOD_BEFORE_EXPIRY), Integer.class);
+		LoginToken loginToken = (LoginToken) token.get();
+		final int seconds = NumberUtils.convertNumberToTargetClass(
+				Math.max(1, loginToken.getLeaseDuration() - REFRESH_PERIOD_BEFORE_EXPIRY),
+				Integer.class);
 
-		final Runnable task = new Runnable() {
-			@Override
-			public void run() {
-				try {
-					if (LifecycleAwareSessionManager.this.token != null
-							&& isTokenRenewable()) {
-						if (renewToken()) {
-							scheduleRenewal();
-						}
+		final Runnable task = () -> {
+			try {
+				if (LifecycleAwareSessionManager.this.token != null
+						&& isTokenRenewable()) {
+					if (renewToken()) {
+						scheduleRenewal();
 					}
 				}
-				catch (Exception e) {
-					logger.error("Cannot renew VaultToken", e);
-				}
+			}
+			catch (Exception e) {
+				logger.error("Cannot renew VaultToken", e);
 			}
 		};
 
@@ -236,8 +234,8 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
 		public Date nextExecutionTime(TriggerContext triggerContext) {
 
 			if (fired.compareAndSet(false, true)) {
-				return new Date(System.currentTimeMillis()
-						+ TimeUnit.SECONDS.toMillis(seconds));
+				return new Date(
+						System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(seconds));
 			}
 
 			return null;

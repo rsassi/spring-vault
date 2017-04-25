@@ -128,7 +128,7 @@ public class VaultTransitTemplate implements VaultTransitOperations {
 		Assert.hasText(keyName, "KeyName must not be empty");
 		Assert.notNull(plaintext, "Plain text must not be null");
 
-		Map<String, String> request = new LinkedHashMap<String, String>();
+		Map<String, String> request = new LinkedHashMap<>();
 
 		request.put("plaintext", Base64Utils.encodeToString(plaintext.getBytes()));
 
@@ -144,7 +144,7 @@ public class VaultTransitTemplate implements VaultTransitOperations {
 		Assert.hasText(keyName, "KeyName must not be empty");
 		Assert.notNull(plaintext, "Plain text must not be null");
 
-		Map<String, String> request = new LinkedHashMap<String, String>();
+		Map<String, String> request = new LinkedHashMap<>();
 
 		request.put("plaintext", Base64Utils.encodeToString(plaintext));
 
@@ -163,7 +163,7 @@ public class VaultTransitTemplate implements VaultTransitOperations {
 		Assert.hasText(keyName, "KeyName must not be empty");
 		Assert.hasText(keyName, "Cipher text must not be empty");
 
-		Map<String, String> request = new LinkedHashMap<String, String>();
+		Map<String, String> request = new LinkedHashMap<>();
 
 		request.put("ciphertext", ciphertext);
 
@@ -181,7 +181,7 @@ public class VaultTransitTemplate implements VaultTransitOperations {
 		Assert.hasText(keyName, "KeyName must not be empty");
 		Assert.hasText(keyName, "Cipher text must not be empty");
 
-		Map<String, String> request = new LinkedHashMap<String, String>();
+		Map<String, String> request = new LinkedHashMap<>();
 
 		request.put("ciphertext", ciphertext);
 
@@ -202,7 +202,7 @@ public class VaultTransitTemplate implements VaultTransitOperations {
 		Assert.hasText(keyName, "KeyName must not be empty");
 		Assert.hasText(ciphertext, "Cipher text must not be empty");
 
-		Map<String, String> request = new LinkedHashMap<String, String>();
+		Map<String, String> request = new LinkedHashMap<>();
 		request.put("ciphertext", ciphertext);
 
 		return (String) vaultOperations
@@ -217,7 +217,7 @@ public class VaultTransitTemplate implements VaultTransitOperations {
 		Assert.hasText(keyName, "KeyName must not be empty");
 		Assert.hasText(ciphertext, "Cipher text must not be empty");
 
-		Map<String, String> request = new LinkedHashMap<String, String>();
+		Map<String, String> request = new LinkedHashMap<>();
 
 		request.put("ciphertext", ciphertext);
 

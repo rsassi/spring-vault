@@ -114,8 +114,8 @@ import org.springframework.web.client.RestOperations;
  * @see <a href="https://www.vaultproject.io/docs/auth/token.html">Auth Backend: Token</a>
  * @see <a href="https://www.vaultproject.io/docs/secrets/cubbyhole/index.html">Cubbyhole
  * Secret Backend</a>
- * @see <a
- * href="https://www.vaultproject.io/docs/concepts/response-wrapping.html">Response
+ * @see <a href=
+ * "https://www.vaultproject.io/docs/concepts/response-wrapping.html">Response
  * Wrapping</a>
  */
 public class CubbyholeAuthentication implements ClientAuthentication {
@@ -149,22 +149,16 @@ public class CubbyholeAuthentication implements ClientAuthentication {
 		try {
 
 			ResponseEntity<VaultResponse> entity = restOperations.exchange(
-					options.getPath(),
-					HttpMethod.GET,
-					new HttpEntity<Object>(VaultHttpHeaders.from(options
-							.getInitialToken())), VaultResponse.class);
+					options.getPath(), HttpMethod.GET,
+					new HttpEntity<>(VaultHttpHeaders.from(options.getInitialToken())),
+					VaultResponse.class);
 
 			Map<String, Object> data = entity.getBody().getData();
 
 			VaultToken token = getToken(data);
-			if (token != null) {
 
-				logger.debug("Login successful using Cubbyhole authentication");
-				return token;
-			}
-
-			throw new VaultException(String.format(
-					"Cannot retrieve Token from cubbyhole: %s", entity.getStatusCode()));
+			logger.debug("Login successful using Cubbyhole authentication");
+			return token;
 		}
 		catch (HttpStatusCodeException e) {
 			throw new VaultException(String.format(
@@ -184,10 +178,9 @@ public class CubbyholeAuthentication implements ClientAuthentication {
 		}
 
 		if (data == null || data.isEmpty()) {
-			throw new VaultException(
-					String.format(
-							"Cannot retrieve Token from cubbyhole: Response at %s does not contain a token",
-							options.getPath()));
+			throw new VaultException(String.format(
+					"Cannot retrieve Token from cubbyhole: Response at %s does not contain a token",
+					options.getPath()));
 		}
 
 		if (data.size() == 1) {
@@ -195,9 +188,8 @@ public class CubbyholeAuthentication implements ClientAuthentication {
 			return VaultToken.of(token);
 		}
 
-		throw new VaultException(
-				String.format(
-						"Cannot retrieve Token from cubbyhole: Response at %s does not contain an unique token",
-						options.getPath()));
+		throw new VaultException(String.format(
+				"Cannot retrieve Token from cubbyhole: Response at %s does not contain an unique token",
+				options.getPath()));
 	}
 }
