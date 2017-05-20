@@ -55,6 +55,7 @@ import org.springframework.web.client.RestOperations;
  * login attempt.
  *
  * @author Mark Paluch
+ * @author Steven Swor
  * @see LoginToken
  * @see SessionManager
  * @see AsyncTaskExecutor
@@ -318,12 +319,10 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
 		@Override
 		public Date nextExecutionTime(LoginToken loginToken) {
 
-			long milliseconds = NumberUtils
-					.convertNumberToTargetClass(
-							Math.max(1000,
-									1000 * loginToken.getLeaseDuration()
-											- timeUnit.toMillis(duration)),
-							Integer.class);
+			long milliseconds = NumberUtils.convertNumberToTargetClass(
+					Math.max(TimeUnit.SECONDS.toMillis(1),
+							TimeUnit.SECONDS.toMillis(loginToken.getLeaseDuration())
+									- timeUnit.toMillis(duration)), Integer.class);
 
 			return new Date(System.currentTimeMillis() + milliseconds);
 		}
